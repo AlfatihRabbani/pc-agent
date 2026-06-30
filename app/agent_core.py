@@ -334,25 +334,27 @@ class AgentCore:
         """Deterministic URL/site handling — don't leave it to the model, which often does
         open_url + plain web_search instead of searching the site (or mis-handles 'search up X')."""
         url_m = _URL_RE.search(msg)
-        q_m = re.search(r"\bsearch(?:\s+up|\s+for)?\s+(.+)", msg, re.I)   # 'search up X' is phrasal
+        # the query is whatever follows the LAST search verb ("...site and look up X")
+        verbs = list(re.finditer(r"\b(?:search(?:\s+up|\s+for)?|look\s*up|find|google)\b", msg, re.I))
 
         site = url_m.group(0) if url_m else None
-        if not site and q_m:
+        if not site and verbs:
             # a bare site keyword counts ONLY when explicitly called out as the destination
             # ("... on youtube", "open youtube and ...") — not just any mention ("roblox video").
             for k in SITE_SEARCH:
-                if re.search(rf"\b(?:on|in|at|from|open|goto|go to|using)\s+{re.escape(k)}\b", msg, re.I):
+                if re.search(rf"\b(?:on|in|at|from|inside|open|goto|go to|using)\s+{re.escape(k)}\b", msg, re.I):
                     site = k
                     break
 
         q = None
-        if q_m:
-            q = q_m.group(1).strip()
+        if verbs:
+            q = msg[verbs[-1].end():].strip()                      # text after the LAST search verb
             if site:
-                q = re.sub(rf"\s+(?:on|in|at|from|using)\s+{re.escape(site)}\b.*$", "", q, flags=re.I)
+                q = re.sub(rf"\s+(?:on|in|at|from|inside|using)\s+{re.escape(site)}\b.*$", "", q, flags=re.I)
                 q = re.sub(re.escape(site), "", q, flags=re.I)
-            q = re.sub(r"^(?:for|up|on|in|at)\s+", "", q.strip(), flags=re.I)
-            q = re.sub(r"\s+(?:on|in|at|using|from)\s+\w[\w.\-/:]*\s*$", "", q, flags=re.I)
+            for k in SITE_SEARCH:                                  # strip a trailing "... on/inside <site>"
+                q = re.sub(rf"\s+(?:on|in|at|from|inside|using)\s+{re.escape(k)}\b.*$", "", q, flags=re.I)
+            q = re.sub(r"^(?:and\s+|please\s+|for\s+|up\s+)+", "", q.strip(), flags=re.I)   # leading filler
             q = q.strip().strip("'\"").strip()
 
         if site and q:
