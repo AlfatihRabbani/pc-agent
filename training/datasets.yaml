@@ -1,0 +1,44 @@
+# Committed dataset list. Each entry has a `kind` so build_dataset.py knows which
+# converter to use: fc (function-calling) | code | general.
+#
+# Two training targets, kept separate on purpose:
+#   - DISPATCHER (E4B router): synth + function-calling. Default build -> data/train.jsonl
+#   - BRAIN (optional, separate run): coding + general.   `--brain` -> data/train_brain.jsonl
+#     (The pretrained 12B already codes well; only fine-tune it if you want to.)
+
+# ── Dispatcher (E4B router) ───────────────────────────────────────────────
+dispatcher:
+  # NOTE: Salesforce/xlam-function-calling-60k is GATED. Swapped for non-gated
+  # sharegpt-format sets so the build runs without HF auth.
+  - repo: hypervariance/function-calling-sharegpt
+    kind: fc
+    split: train
+    sample: 18000
+    license: apache-2.0
+  - repo: NousResearch/hermes-function-calling-v1
+    kind: fc
+    split: train
+    sample: 10000
+    license: apache-2.0
+
+synth:
+  - file: data/synth_windows_actions.jsonl
+    weight: 3        # oversample — small but the most on-target for our tools
+
+# ── Brain fine-tune (OPTIONAL, separate run; not built by default) ────────
+brain_optional:
+  - repo: ise-uiuc/Magicoder-Evol-Instruct-110K
+    kind: code
+    split: train
+    sample: 20000
+    license: apache-2.0
+  - repo: m-a-p/Code-Feedback
+    kind: code
+    split: train
+    sample: 10000
+    license: apache-2.0
+  - repo: teknium/OpenHermes-2.5
+    kind: general
+    split: train
+    sample: 8000      # keep general light to avoid catastrophic forgetting
+    license: other

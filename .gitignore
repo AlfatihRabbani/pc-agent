@@ -1,0 +1,36 @@
+# Python
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+
+# Large artifacts (never push to GitHub) — models go to HuggingFace
+models/
+.hf_cache/
+.huggingface/
+video/
+*.safetensors
+*.bin
+*.gguf
+*.pt
+*.arrow
+
+# Runtime data / logs (contain personal activity!)
+logs/
+data/
+*.log
+*.flag
+*.jsonl
+!training/*.jsonl
+
+# Secrets
+*.token
+*token*.txt
+.env
+hf_token*
+
+# OS / editor
+Thumbs.db
+.DS_Store
+.idea/
+.vscode/

@@ -1,0 +1,28 @@
+# ── PC-Agent core ──────────────────────────────────────────────
+# LLM brain + dispatcher (Gemma 4)
+transformers>=4.49.0
+accelerate>=1.2.0
+bitsandbytes>=0.45.0          # 4-bit (NF4) quantization for the 12B on 12 GB
+sentencepiece>=0.2.0
+safetensors>=0.4.5
+torch                          # install the CUDA build via scripts/setup.bat
+
+# ── Training (QLoRA fine-tune of the E4B dispatcher) ───────────
+peft>=0.14.0
+trl>=0.13.0
+datasets>=3.2.0
+huggingface_hub>=0.27.0
+
+# ── Windows control (the Executor "hands") ────────────────────
+pywinauto>=0.6.8               # UI Automation backbone
+uiautomation>=2.0.20          # raw UIA tree access
+psutil>=6.1.0                 # process / system info
+pywin32>=308                  # Task Scheduler, COM, Win32 APIs
+pyautogui>=0.9.54             # cursor + keyboard injection
+pynput>=1.7.7                 # lower-level input (second-cursor backend)
+pycaw>=20240210              # system volume / mute control
+comtypes>=1.4.0              # COM bindings used by pycaw
+
+# ── App / config plumbing ─────────────────────────────────────
+pyyaml>=6.0.2
+rich>=13.9.0                  # readable REPL output

@@ -1,0 +1,58 @@
+# ════════════════════════════════════════════════════════════════
+#  PC-Agent configuration
+#  Edit paths/IDs here. Everything reads from this one file.
+# ════════════════════════════════════════════════════════════════
+
+brain:
+  # General chat + knowledge. Runs 4-bit on the 3080 Ti (~7 GB).
+  # Abliterated/uncensored, un-gated, safetensors. Alt: zaakirio/gemma-4-12b-it-uncensored
+  # (you already have its GGUF locally), or OpenYourMind/gemma-4-12B-it-abliterated-uncensored.
+  model_id: "huihui-ai/Huihui-gemma-4-12B-it-abliterated"
+  local_dir: "models/gemma-4-12B-abliterated"   # unused if absent -> loads from HF cache
+  load_in_4bit: true
+  max_new_tokens: 768
+  temperature: 0.7
+  context_window: 8192
+
+dispatcher:
+  # The router that turns natural language into tool calls.
+  # mode: "prompt"  -> use the brain model with a structured prompt (works now, no training)
+  # mode: "finetuned" -> use the QLoRA-trained E4B adapter (after training/train_qlora.py)
+  mode: "prompt"
+  # E2B (not E4B): E4B's ~7GB full-precision per-layer embeddings exceed 12GB VRAM.
+  # E2B is ~5GB, loads in ~3-4GB, trains + runs comfortably on the 3080 Ti.
+  base_model_id: "huihui-ai/Huihui-gemma-4-E2B-it-abliterated"
+  # Local copy on the G: SSD — cold-load reads ~10GB; SSD is ~4x faster than the E: HDD.
+  fast_dir: "G:/pc-agent-models/E2B-abliterated"   # SSD copy — faster cold load than E: HDD
+  adapter_dir: "models/dispatcher-e4b-qlora"
+  load_in_4bit: true
+  max_new_tokens: 256
+  temperature: 0.0          # deterministic routing
+
+input:
+  # The "second cursor / second keyboard" the agent uses.
+  # backend: "mousemux"   -> a real independent on-screen cursor (recommended for you)
+  #          "pynput"     -> drives the system cursor directly (no isolation; for testing)
+  #          "interception" -> per-device targeting via the Interception driver (advanced)
+  backend: "mousemux"
+  mousemux:
+    # MouseMux assigns a dedicated seat to the agent's virtual device.
+    # See README "Second cursor setup" for the one-time MouseMux config.
+    agent_seat_name: "PC-Agent"
+    virtual_device_hint: "PC-Agent-Virtual-HID"
+  move_duration_s: 0.25     # cursor glide time (human-like; set 0 for instant)
+
+safety:
+  # Every action is classified. These tiers gate what runs without asking.
+  auto_approve_read: true   # system info, list apps, read settings -> run freely
+  confirm_downloads: true   # winget install / any download -> ask first
+  confirm_settings: true    # changing settings / control panel -> ask first
+  confirm_tasks: true       # creating/deleting scheduled tasks -> ask first
+  confirm_input: false      # typing/clicking runs without a prompt (user asked to remove it)
+  audit_log: "logs/actions.jsonl"
+  # Hard blocks: the agent will refuse these regardless of approval.
+  blocked_commands: ["format", "diskpart", "bcdedit", "reg delete HKLM", "rmdir /s"]
+
+paths:
+  data_dir: "data"
+  logs_dir: "logs"
