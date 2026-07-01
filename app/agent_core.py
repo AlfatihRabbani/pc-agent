@@ -181,6 +181,10 @@ class AgentCore:
         self._stopcrit = StoppingCriteriaList([_StopOnFlag(self._stop)])
         self.get_external_hwnd = get_external_hwnd   # () -> hwnd of last non-PC-Agent window
         self.before_input = before_input             # () -> drop our own focus (last resort)
+        self.on_loading = None                       # (loading:bool) -> UI 'Switching Models…'
+        self.chat_backend = self.cfg.get("chat.backend", "e2b")     # 'e2b' or 'ollama'
+        self.chat_model = self.cfg.get("chat.model", "")            # ollama model name
+        self.ollama_url = self.cfg.get("chat.url", "http://localhost:11434").rstrip("/")
 
         base = self.cfg.get("dispatcher.base_model_id")
         # Prefer a local copy on a fast SSD if configured (reading ~10GB off the HDD is
@@ -433,10 +437,53 @@ class AgentCore:
         # 3) nothing solid -> treat as chat
         return {"action": "chat"}
 
+    # ── chat / writing model (E2B built-in, or a GGUF via Ollama) ───
+    def _ollama_loaded(self) -> bool:
+        import json
+        import urllib.request
+        try:
+            r = json.loads(urllib.request.urlopen(self.ollama_url + "/api/ps", timeout=3).read())
+            return any((m.get("model") or m.get("name") or "").startswith(self.chat_model)
+                       for m in r.get("models", []))
+        except Exception:  # noqa: BLE001
+            return False
+
+    def _ollama_chat(self, messages: list[dict], max_new: int) -> str:
+        import json
+        import urllib.request
+        # first use loads the model (slow) — tell the UI to show the switching animation
+        loading = not self._ollama_loaded()
+        if loading and self.on_loading:
+            self.on_loading(True)
+        try:
+            body = json.dumps({"model": self.chat_model,
+                               "messages": [{"role": "system", "content": PERSONA}] + messages,
+                               "stream": False,
+                               "options": {"temperature": 0.7, "num_predict": max_new}}).encode()
+            req = urllib.request.Request(self.ollama_url + "/api/chat", data=body,
+                                         headers={"Content-Type": "application/json"})
+            resp = json.loads(urllib.request.urlopen(req, timeout=600).read())
+            return (resp.get("message") or {}).get("content", "").strip()
+        finally:
+            if loading and self.on_loading:
+                self.on_loading(False)
+
+    def _chat_generate(self, messages: list[dict], max_new: int = 512) -> str:
+        if self.chat_backend == "ollama" and self.chat_model:
+            try:
+                out = self._ollama_chat(messages, max_new)
+                if out:
+                    return out
+            except Exception as e:  # noqa: BLE001
+                self._flog(f"[ollama fail -> e2b] {e}")
+        # E2B fallback: fold persona into the first user turn (Gemma has no system role)
+        m2 = [dict(x) for x in messages]
+        if m2 and m2[0].get("role") == "user":
+            m2[0]["content"] = f"{PERSONA}\n\n{m2[0]['content']}"
+        return self._gen(m2, max_new=max_new, temperature=0.7, use_adapter=False)
+
     def _chat(self) -> str:
-        msgs = [dict(m) for m in self.history]
-        msgs[0]["content"] = f"{PERSONA}\n\n{msgs[0]['content']}"   # fold persona into 1st user turn
-        return self._gen(msgs, max_new=384, temperature=0.7, use_adapter=False)
+        return self._chat_generate([dict(m) for m in self.history], max_new=384)
 
     # ── window focus so injected input lands on the TARGET, not our chat box ──
     def _find_window(self, substr: str):
@@ -585,8 +632,7 @@ class AgentCore:
             import time
             ask = (f"Write {dec.get('prompt')}.\n\nOutput ONLY the text itself — no preamble, "
                    f"no 'Sure', no explanation, no markdown fences.")
-            text = self._gen([{"role": "user", "content": ask}],
-                             max_new=700, temperature=0.7, use_adapter=False)
+            text = self._chat_generate([{"role": "user", "content": ask}], max_new=700)
             if self._stop.is_set() or not text.strip():
                 reply = "⏹ Stopped." if self._stop.is_set() else "[nothing generated]"
             else:

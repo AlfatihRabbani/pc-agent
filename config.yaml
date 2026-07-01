@@ -29,6 +29,14 @@ dispatcher:
   max_new_tokens: 256
   temperature: 0.0          # deterministic routing
 
+chat:
+  # The conversational / writing model (separate from the dispatch router).
+  # backend "e2b"    -> use the built-in E2B base (no extra load; lower quality)
+  #         "ollama" -> use a GGUF served by Ollama (e.g. the 12B) for better writing
+  backend: "ollama"
+  model: "pc-agent-12b"          # ollama model name (see `ollama list`)
+  url: "http://localhost:11434"
+
 input:
   # The "second cursor / second keyboard" the agent uses.
   # backend: "mousemux"   -> a real independent on-screen cursor (recommended for you)

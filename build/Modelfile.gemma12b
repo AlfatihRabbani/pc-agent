@@ -1,0 +1,3 @@
+FROM G:\AI_Models\chat\Gemma-4-12B-Uncensored-zaakirio\gemma-4-12b-it-uncensored-Q5_K_M.gguf
+PARAMETER temperature 0.7
+PARAMETER num_ctx 4096

@@ -19,7 +19,7 @@ import threading
 from pathlib import Path
 
 import tkinter as tk
-from tkinter import messagebox, scrolledtext
+from tkinter import messagebox, scrolledtext, ttk
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
@@ -55,10 +55,10 @@ class ChatApp:
         # top bar: "Show logs" (left) + status (fills the rest)
         top = tk.Frame(self.root, bg=PANEL)
         top.pack(fill="x", side="top")
-        self.logs_btn = tk.Label(top, text="📋 Show logs", bg=PANEL, fg=USER,
-                                 font=("Segoe UI", 9, "underline"), cursor="hand2", padx=8, pady=2)
-        self.logs_btn.pack(side="left")
-        self.logs_btn.bind("<Button-1>", lambda e: self._show_logs())
+        self.settings_btn = tk.Label(top, text="⚙ Settings", bg=PANEL, fg=USER,
+                                     font=("Segoe UI", 9, "underline"), cursor="hand2", padx=8, pady=2)
+        self.settings_btn.pack(side="left")
+        self.settings_btn.bind("<Button-1>", lambda e: self._open_settings())
         self.clear_btn = tk.Label(top, text="🗑 Clear chat", bg=PANEL, fg=USER,
                                   font=("Segoe UI", 9, "underline"), cursor="hand2", padx=8, pady=2)
         self.clear_btn.pack(side="right")
@@ -75,6 +75,16 @@ class ChatApp:
         self.log.tag_config("you", foreground=USER, font=("Segoe UI", 10, "bold"))
         self.log.tag_config("agent", foreground=AGENT)
         self.log.tag_config("sys", foreground=SYS, font=("Segoe UI", 9, "italic"))
+
+        # "Switching Models…" overlay (shown while the chat model loads)
+        self.loading_frame = tk.Frame(self.log, bg=BG)
+        self.loading_label = tk.Label(self.loading_frame, text="Switching Models",
+                                      bg=BG, fg=AGENT, font=("Segoe UI", 13, "bold"))
+        self.loading_label.pack(pady=(0, 12))
+        self.loading_bar = ttk.Progressbar(self.loading_frame, mode="indeterminate", length=220)
+        self.loading_bar.pack()
+        self._dots_job = None
+        self._dots = 0
 
         # input row
         row = tk.Frame(self.root, bg=PANEL)
@@ -118,6 +128,115 @@ class ChatApp:
             print(f"[{datetime.datetime.now():%H:%M:%S}] {msg}", flush=True)
         except Exception:  # noqa: BLE001
             pass
+
+    # ── model-switching loader ──────────────────────────────────────
+    def _on_loading(self, loading: bool):
+        def do():
+            if loading:
+                self._dots = 0
+                self.loading_frame.place(relx=0.5, rely=0.4, anchor="center")
+                self.loading_bar.start(12)
+                self._animate_dots()
+                self.status.config(text="Switching models…")
+            else:
+                if self._dots_job:
+                    self.root.after_cancel(self._dots_job)
+                    self._dots_job = None
+                try:
+                    self.loading_bar.stop()
+                    self.loading_frame.place_forget()
+                except Exception:  # noqa: BLE001
+                    pass
+        self._ui(do)
+
+    def _animate_dots(self):
+        self._dots = (self._dots % 3) + 1
+        self.loading_label.config(text="Switching Models" + "." * self._dots)
+        self._dots_job = self.root.after(400, self._animate_dots)
+
+    # ── settings ────────────────────────────────────────────────────
+    def _list_dispatch_models(self):
+        import glob
+        import os
+        vals = []
+        for d in sorted(glob.glob(str(ROOT / "models" / "dispatcher-*"))):
+            if (os.path.exists(os.path.join(d, "adapter_model.safetensors"))
+                    or glob.glob(os.path.join(d, "checkpoint-*"))):
+                vals.append(os.path.basename(d))
+        vals.append("prompt (base, no adapter)")
+        return vals
+
+    def _list_chat_models(self):
+        vals = ["E2B (built-in)"]
+        try:
+            import json
+            import urllib.request
+            r = json.loads(urllib.request.urlopen("http://localhost:11434/api/tags", timeout=3).read())
+            vals += [m["name"] for m in r.get("models", []) if m.get("name")]
+        except Exception:  # noqa: BLE001
+            pass
+        return vals
+
+    def _open_settings(self):
+        win = tk.Toplevel(self.root)
+        win.title("PC-Agent — Settings")
+        win.configure(bg=BG)
+        win.geometry("440x320")
+        win.attributes("-topmost", True)
+        tk.Label(win, text="Settings", bg=BG, fg=TXT, font=("Segoe UI", 14, "bold")).pack(pady=(16, 12))
+
+        tk.Label(win, text="Dispatch model (the task router):", bg=BG, fg=SYS,
+                 anchor="w", font=("Segoe UI", 9)).pack(fill="x", padx=18)
+        disp_vals = self._list_dispatch_models()
+        cur_disp = self.core.adapter_name if self.core else disp_vals[0]
+        disp_var = tk.StringVar(value=(cur_disp if cur_disp in disp_vals else disp_vals[0]))
+        ttk.Combobox(win, textvariable=disp_var, values=disp_vals, state="readonly").pack(fill="x", padx=18, pady=(2, 12))
+
+        tk.Label(win, text="Chat / writing model (the 12B):", bg=BG, fg=SYS,
+                 anchor="w", font=("Segoe UI", 9)).pack(fill="x", padx=18)
+        chat_vals = self._list_chat_models()
+        if self.core and self.core.chat_backend == "ollama":
+            cur_chat = self.core.chat_model if self.core.chat_model in chat_vals else chat_vals[0]
+        else:
+            cur_chat = "E2B (built-in)"
+        chat_var = tk.StringVar(value=cur_chat)
+        ttk.Combobox(win, textvariable=chat_var, values=chat_vals, state="readonly").pack(fill="x", padx=18, pady=(2, 14))
+
+        row = tk.Frame(win, bg=BG)
+        row.pack(fill="x", padx=18)
+        tk.Button(row, text="📋 Show logs", command=self._show_logs, relief="flat",
+                  bg=PANEL, fg=USER, font=("Segoe UI", 9)).pack(side="left")
+        tk.Button(row, text="Save", command=lambda: self._save_settings(disp_var.get(), chat_var.get(), win),
+                  relief="flat", bg="#2a4a8a", fg="white", font=("Segoe UI", 9, "bold"), padx=16).pack(side="right")
+        tk.Label(win, text="Chat model applies immediately. Dispatch model needs a restart.",
+                 bg=BG, fg=SYS, font=("Segoe UI", 8)).pack(pady=(12, 0))
+
+    def _save_settings(self, disp: str, chat: str, win):
+        try:
+            import yaml
+            cfgp = ROOT / "config.yaml"
+            with open(cfgp, encoding="utf-8") as f:
+                cfg = yaml.safe_load(f)
+            cfg.setdefault("chat", {})
+            if chat.startswith("E2B"):
+                cfg["chat"]["backend"] = "e2b"
+            else:
+                cfg["chat"]["backend"] = "ollama"
+                cfg["chat"]["model"] = chat
+            if self.core:                                   # apply chat model live
+                self.core.chat_backend = cfg["chat"]["backend"]
+                self.core.chat_model = cfg["chat"].get("model", "")
+            restart = False
+            if not disp.startswith("prompt"):
+                cfg.setdefault("dispatcher", {})["adapter_dir"] = f"models/{disp}"
+                restart = bool(self.core and disp != self.core.adapter_name)
+            with open(cfgp, "w", encoding="utf-8") as f:
+                yaml.safe_dump(cfg, f, sort_keys=False, allow_unicode=True)
+            win.destroy()
+            self._add("PC-Agent", "Settings saved."
+                      + (" Restart the app to load the new dispatch model." if restart else ""), "sys")
+        except Exception as e:  # noqa: BLE001
+            messagebox.showerror("PC-Agent", f"Could not save settings: {e}")
 
     def _clear_chat(self):
         """Wipe the transcript and reset the conversation history (model starts fresh)."""
@@ -216,6 +335,7 @@ class ChatApp:
             self.core = AgentCore(status=self._set_status,
                                   get_external_hwnd=lambda: self._last_external,
                                   before_input=self._drop_focus)
+            self.core.on_loading = self._on_loading   # 'Switching Models…' overlay
             self.ready = True
             try:
                 (ROOT / "logs" / "app_ready.flag").write_text("ready", encoding="utf-8")
