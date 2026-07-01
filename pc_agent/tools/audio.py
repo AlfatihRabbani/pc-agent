@@ -7,6 +7,13 @@ from .registry import tool
 
 def _endpoint():
     """Get the default speaker's IAudioEndpointVolume interface (modern pycaw)."""
+    # pycaw uses COM; each worker thread needs COM initialized or GetSpeakers() raises
+    # "CoInitialize has not been called" (WinError -2147221008).
+    try:
+        import comtypes
+        comtypes.CoInitialize()
+    except Exception:  # noqa: BLE001
+        pass
     from pycaw.utils import AudioUtilities
     return AudioUtilities.GetSpeakers().EndpointVolume
 
