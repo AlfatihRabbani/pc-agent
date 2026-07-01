@@ -29,6 +29,11 @@ data/
 .env
 hf_token*
 
+# Build artifacts (the exe is a Release asset, not source)
+*.exe
+*.spec
+build/_work/
+
 # OS / editor
 Thumbs.db
 .DS_Store
