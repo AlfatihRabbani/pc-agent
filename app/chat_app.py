@@ -59,6 +59,10 @@ class ChatApp:
                                  font=("Segoe UI", 9, "underline"), cursor="hand2", padx=8, pady=2)
         self.logs_btn.pack(side="left")
         self.logs_btn.bind("<Button-1>", lambda e: self._show_logs())
+        self.clear_btn = tk.Label(top, text="🗑 Clear chat", bg=PANEL, fg=USER,
+                                  font=("Segoe UI", 9, "underline"), cursor="hand2", padx=8, pady=2)
+        self.clear_btn.pack(side="right")
+        self.clear_btn.bind("<Button-1>", lambda e: self._clear_chat())
         self.status = tk.Label(top, text="Starting…", bg=PANEL, fg=SYS,
                                anchor="w", padx=6, font=("Segoe UI", 9))
         self.status.pack(side="left", fill="x", expand=True)
@@ -114,6 +118,19 @@ class ChatApp:
             print(f"[{datetime.datetime.now():%H:%M:%S}] {msg}", flush=True)
         except Exception:  # noqa: BLE001
             pass
+
+    def _clear_chat(self):
+        """Wipe the transcript and reset the conversation history (model starts fresh)."""
+        if self.core is not None:
+            self.core.history = []
+
+        def do():
+            self.log.config(state="normal")
+            self.log.delete("1.0", "end")
+            self.log.config(state="disabled")
+        self._ui(do)
+        self._log("[clear] chat + history reset")
+        self._add("PC-Agent", "Chat cleared.", "sys")
 
     def _show_logs(self):
         """Open a console showing the full log (from startup) and following it live."""
