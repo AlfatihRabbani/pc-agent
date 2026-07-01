@@ -13,11 +13,11 @@ VSVersionInfo(
   kids=[
     StringFileInfo([
       StringTable('040904B0', [
-        StringStruct('CompanyName', 'onevloth'),
+        StringStruct('CompanyName', 'AlfatihRabbani'),
         StringStruct('FileDescription', 'PC-Agent - local Windows control assistant'),
         StringStruct('FileVersion', '1.0.0.0'),
         StringStruct('InternalName', 'PC-Agent'),
-        StringStruct('LegalCopyright', 'Copyright (c) 2026 onevloth. MIT License.'),
+        StringStruct('LegalCopyright', 'Copyright (c) 2026 AlfatihRabbani. MIT License.'),
         StringStruct('OriginalFilename', 'PC-Agent.exe'),
         StringStruct('ProductName', 'PC-Agent'),
         StringStruct('ProductVersion', '1.0.0.0')

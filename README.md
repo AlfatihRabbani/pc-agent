@@ -8,6 +8,8 @@ tool layer.
 
 Built and tuned to run on a single **RTX 3080 Ti (12 GB)**.
 
+*Made by **AlfatihRabbani**, built with assistance from **Claude** (Anthropic).*
+
 > ⚠️ Research/hobby project. It can move your mouse, type, and change settings —
 > read the **Safety** section before pointing it at anything you care about.
 

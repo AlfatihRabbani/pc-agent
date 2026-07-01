@@ -9,13 +9,13 @@
 $exe = Join-Path $PSScriptRoot "..\PC-Agent.exe"
 if (-not (Test-Path $exe)) { Write-Host "PC-Agent.exe not found — build it first."; exit 1 }
 
-$subject = "CN=onevloth PC-Agent"
+$subject = "CN=AlfatihRabbani PC-Agent"
 $cert = Get-ChildItem Cert:\CurrentUser\My |
         Where-Object { $_.Subject -eq $subject } | Select-Object -First 1
 if (-not $cert) {
     $cert = New-SelfSignedCertificate -Type CodeSigningCert -Subject $subject `
         -CertStoreLocation Cert:\CurrentUser\My -KeyUsage DigitalSignature `
-        -FriendlyName "onevloth PC-Agent code signing" -NotAfter (Get-Date).AddYears(5)
+        -FriendlyName "AlfatihRabbani PC-Agent code signing" -NotAfter (Get-Date).AddYears(5)
     Write-Host "Created self-signed code-signing certificate."
 }
 
