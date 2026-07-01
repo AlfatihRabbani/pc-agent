@@ -189,6 +189,36 @@ def site_search(site: str, query: str) -> str:
 
 
 @tool(
+    name="play_youtube",
+    description="Play a song/video on YouTube by name — finds the TOP result and opens it "
+                "playing. Use for 'play <song>', 'play <song> on youtube'.",
+    parameters={"query": {"type": "string", "description": "Song / video to play."}},
+    required=["query"],
+    risk=Risk.READ,
+)
+def play_youtube(query: str) -> str:
+    import re as _re
+    import urllib.parse
+    import urllib.request
+    import webbrowser
+    results = "https://www.youtube.com/results?search_query=" + urllib.parse.quote_plus(query)
+    try:
+        req = urllib.request.Request(results, headers={
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+                          "(KHTML, like Gecko) Chrome/124.0 Safari/537.36"})
+        html = urllib.request.urlopen(req, timeout=12).read().decode("utf-8", "ignore")
+        m = _re.search(r'"videoId":"([A-Za-z0-9_-]{11})"', html)   # first = top result
+        if m:
+            watch = f"https://www.youtube.com/watch?v={m.group(1)}"
+            webbrowser.open(watch)
+            return f"Playing '{query}' -> {watch}"
+    except Exception:  # noqa: BLE001
+        pass
+    webbrowser.open(results)   # fallback: open the search results page
+    return f"Opened YouTube search for '{query}' (couldn't auto-pick the video)."
+
+
+@tool(
     name="web_search",
     description="Search the WEB for a query — opens the default browser straight to the "
                 "results page. Use for 'search for X', 'look up X', 'google X', "

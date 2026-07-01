@@ -76,6 +76,10 @@ user: open youtube.com and search deltarune
 {"action":"tool","tool":"site_search","args":{"site":"youtube.com","query":"deltarune"}}
 user: search cats on youtube
 {"action":"tool","tool":"site_search","args":{"site":"youtube","query":"cats"}}
+user: play radiant emerald on youtube
+{"action":"tool","tool":"play_youtube","args":{"query":"radiant emerald"}}
+user: play diamonds in the sky from sonic r
+{"action":"tool","tool":"play_youtube","args":{"query":"diamonds in the sky from sonic r"}}
 user: how are you today
 {"action":"chat"}
 
@@ -364,12 +368,27 @@ class AgentCore:
             return {"action": "tool", "tool": "open_url", "args": {"url": url_m.group(0)}}
         return None
 
+    def _coerce_play(self, msg: str) -> dict | None:
+        """'play <song> [on youtube]' -> play_youtube (finds + plays the top result)."""
+        m = re.match(r"^\s*(?:play|put on|start playing)\s+(.+)", msg.strip(), re.I)
+        if not m:
+            return None
+        q = m.group(1).strip()
+        q = re.sub(r"^(?:the\s+)?(?:song|track|music|video)\s+", "", q, flags=re.I)
+        q = re.sub(r"\s+(?:on|in|from|via|using)\s+(?:youtube|yt|the\s+browser|browser)\s*$",
+                   "", q, flags=re.I)
+        q = q.strip().strip("'\"").strip()
+        if not q:
+            return None
+        return {"action": "tool", "tool": "play_youtube", "args": {"query": q}}
+
     def _route(self, user_msg: str) -> dict:
-        # 0) deterministic site-search: "<site> ... search <query>" -> that site's own search
-        coerced = self._coerce_site_search(user_msg)
-        if coerced:
-            self._flog(f"[route] msg={user_msg!r} COERCE dec={coerced}")
-            return coerced
+        # 0) deterministic: "play X" -> youtube; "<site> ... search Y" -> that site's search
+        for _coerce in (self._coerce_play, self._coerce_site_search):
+            coerced = _coerce(user_msg)
+            if coerced:
+                self._flog(f"[route] msg={user_msg!r} COERCE dec={coerced}")
+                return coerced
 
         # 1) fast path: trained adapter + compact prompt (great for simple one-tool reads).
         #    Skip it for compound/web-search requests — those need the plan-capable fallback.

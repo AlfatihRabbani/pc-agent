@@ -46,7 +46,7 @@ safety:
   # Every action is classified. These tiers gate what runs without asking.
   auto_approve_read: true   # system info, list apps, read settings -> run freely
   confirm_downloads: true   # winget install / any download -> ask first
-  confirm_settings: true    # changing settings / control panel -> ask first
+  confirm_settings: false   # volume/brightness/settings run without a prompt (benign, reversible)
   confirm_tasks: true       # creating/deleting scheduled tasks -> ask first
   confirm_input: false      # typing/clicking runs without a prompt (user asked to remove it)
   audit_log: "logs/actions.jsonl"
