@@ -117,6 +117,22 @@ def open_app(app: str) -> str:
         return f"Couldn't find or launch '{app}': {e}"
 
 
+def _browser_name() -> str:
+    """Friendly name of the default browser (so the agent can say 'on Firefox')."""
+    try:
+        import winreg
+        with winreg.OpenKey(winreg.HKEY_CURRENT_USER,
+                r"Software\Microsoft\Windows\Shell\Associations\UrlAssociations\https\UserChoice") as k:
+            p = winreg.QueryValueEx(k, "ProgId")[0].lower()
+        for kw, name in (("firefox", "Firefox"), ("chrome", "Chrome"), ("msedge", "Edge"),
+                         ("edge", "Edge"), ("brave", "Brave"), ("opera", "Opera")):
+            if kw in p:
+                return name
+    except Exception:  # noqa: BLE001
+        pass
+    return "your browser"
+
+
 # site keyword -> that site's own search-results URL ({q} = url-encoded query).
 SITE_SEARCH = {
     "youtube": "https://www.youtube.com/results?search_query={q}",
@@ -155,7 +171,7 @@ def open_url(url: str) -> str:
         u = "https://" + u
     try:
         webbrowser.open(u)
-        return f"Opening {u}."
+        return f"Opening {u} on {_browser_name()}."
     except Exception as e:  # noqa: BLE001
         return f"Failed to open {u}: {e}"
 
@@ -183,7 +199,7 @@ def site_search(site: str, query: str) -> str:
         url = "https://www.google.com/search?q=" + quote_plus(f"{query} site:{host}")
     try:
         webbrowser.open(url)
-        return f"Searching {site} for '{query}'."
+        return f"Searching {site} for '{query}' on {_browser_name()}."
     except Exception as e:  # noqa: BLE001
         return f"Failed: {e}"
 
@@ -211,11 +227,11 @@ def play_youtube(query: str) -> str:
         if m:
             watch = f"https://www.youtube.com/watch?v={m.group(1)}"
             webbrowser.open(watch)
-            return f"Playing '{query}' -> {watch}"
+            return f"Playing '{query}' on {_browser_name()}."
     except Exception:  # noqa: BLE001
         pass
     webbrowser.open(results)   # fallback: open the search results page
-    return f"Opened YouTube search for '{query}' (couldn't auto-pick the video)."
+    return f"Opened a YouTube search for '{query}' on {_browser_name()} (couldn't auto-pick the video)."
 
 
 @tool(
@@ -233,7 +249,7 @@ def web_search(query: str) -> str:
     url = "https://www.google.com/search?q=" + quote_plus(query)
     try:
         webbrowser.open(url)
-        return f"Searching the web for '{query}'."
+        return f"Searching the web for '{query}' on {_browser_name()}."
     except Exception as e:  # noqa: BLE001
         return f"Failed to open search: {e}"
 

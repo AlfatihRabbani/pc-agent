@@ -369,22 +369,44 @@ class AgentCore:
         return None
 
     def _coerce_play(self, msg: str) -> dict | None:
-        """'play <song> [on youtube]' -> play_youtube (finds + plays the top result)."""
-        m = re.match(r"^\s*(?:play|put on|start playing)\s+(.+)", msg.strip(), re.I)
+        """'play <song> [on youtube]' -> play_youtube. Sections it: verb=play,
+        query=the song (filler like 'song'/'track' removed), platform stripped."""
+        m = re.match(r"^\s*(?:play|put on|start playing)\b(.*)$", msg.strip(), re.I)
         if not m:
             return None
         q = m.group(1).strip()
-        q = re.sub(r"^(?:the\s+)?(?:song|track|music|video)\s+", "", q, flags=re.I)
-        q = re.sub(r"\s+(?:on|in|from|via|using)\s+(?:youtube|yt|the\s+browser|browser)\s*$",
-                   "", q, flags=re.I)
-        q = q.strip().strip("'\"").strip()
+        # drop the platform phrase ("... on youtube", "on spotify", "on the browser")
+        q = re.sub(r"\s+(?:on|in|from|via|using)\s+"
+                   r"(?:youtube|yt|spotify|soundcloud|the\s+browser|browser)\b.*$", "", q, flags=re.I)
+        # drop filler words so the search is clean ("fnaf 1 song by X" -> "fnaf 1 by X")
+        q = re.sub(r"\bthe\s+(?:song|track)\b", " ", q, flags=re.I)
+        q = re.sub(r"\b(?:song|track|music\s+video)\b", " ", q, flags=re.I)
+        q = re.sub(r"\s+", " ", q).strip().strip("'\"").strip()
         if not q:
             return None
         return {"action": "tool", "tool": "play_youtube", "args": {"query": q}}
 
+    def _coerce_write(self, msg: str) -> dict | None:
+        """'write me a paragraph about X [in notepad]' -> generate text, open an editor, type it."""
+        m = re.match(r"^\s*(?:write|compose|type out)\b(.*)$", msg.strip(), re.I)
+        if not m:
+            return None
+        body = m.group(1).strip()
+        app = "notepad"
+        am = re.search(r"\s+(?:in|into|on|to|using)\s+"
+                       r"(notepad|wordpad|word|a\s+document|a\s+note|a\s+file)\s*$", body, re.I)
+        if am:
+            t = am.group(1).lower()
+            app = "wordpad" if "wordpad" in t else ("word" if t == "word" else "notepad")
+            body = body[:am.start()].strip()
+        body = re.sub(r"^(?:me|us)\s+", "", body, flags=re.I).strip()
+        if not body or len(body) < 3:
+            return None
+        return {"action": "write", "prompt": body, "app": app}
+
     def _route(self, user_msg: str) -> dict:
-        # 0) deterministic: "play X" -> youtube; "<site> ... search Y" -> that site's search
-        for _coerce in (self._coerce_play, self._coerce_site_search):
+        # 0) deterministic: "write X" -> generate+type; "play X" -> youtube; site search
+        for _coerce in (self._coerce_write, self._coerce_play, self._coerce_site_search):
             coerced = _coerce(user_msg)
             if coerced:
                 self._flog(f"[route] msg={user_msg!r} COERCE dec={coerced}")
@@ -559,6 +581,20 @@ class AgentCore:
                     # give a just-launched app time to focus before the next step types into it
                     time.sleep(1.6 if tool == "open_app" else 0.5)
             reply = "\n".join(f"✓ {s.get('tool')}: {o}" for s, o in zip(steps, outs))
+        elif action == "write":
+            import time
+            ask = (f"Write {dec.get('prompt')}.\n\nOutput ONLY the text itself — no preamble, "
+                   f"no 'Sure', no explanation, no markdown fences.")
+            text = self._gen([{"role": "user", "content": ask}],
+                             max_new=700, temperature=0.7, use_adapter=False)
+            if self._stop.is_set() or not text.strip():
+                reply = "⏹ Stopped." if self._stop.is_set() else "[nothing generated]"
+            else:
+                app = dec.get("app", "notepad")
+                self._run_tool("open_app", {"app": app}, confirm)
+                time.sleep(2.2)   # let the editor open + take focus
+                out = self._run_tool("type_text", {"text": text}, confirm, focus_msg=None)
+                reply = f"✍️ Wrote it in {app}." if "[" not in out else out
         else:
             reply = self._chat()
             if self._stop.is_set():
