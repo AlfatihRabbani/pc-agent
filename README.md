@@ -14,6 +14,8 @@ Built and tuned to run on a single **RTX 3080 Ti (12 GB)**.
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Platform: Windows](https://img.shields.io/badge/Platform-Windows-0078D6)](#)
 
+**🤗 [Model on Hugging Face](https://huggingface.co/onevloth/pc-agent-dispatcher-gemma4-e2b)** · **⬇ [Download the app](https://github.com/AlfatihRabbani/pc-agent/releases/latest)** · **🛠 [Installation](#installation)**
+
 > ⚠️ Research/hobby project. It can move your mouse, type, and change settings —
 > read the **Safety** section before pointing it at anything you care about.
 
@@ -21,13 +23,9 @@ Built and tuned to run on a single **RTX 3080 Ti (12 GB)**.
 
 ## Demo
 
-<video src="https://github.com/AlfatihRabbani/pc-agent/raw/main/video/demo1.mp4" controls width="100%"></video>
-<video src="https://github.com/AlfatihRabbani/pc-agent/raw/main/video/demo2.mp4" controls width="100%"></video>
-<video src="https://github.com/AlfatihRabbani/pc-agent/raw/main/video/demo3.mp4" controls width="100%"></video>
-<video src="https://github.com/AlfatihRabbani/pc-agent/raw/main/video/demo4.mp4" controls width="100%"></video>
+![PC-Agent demo](video/demo.gif)
 
-> If the players don't appear inline, click to download/play:
-> [demo 1](video/demo1.mp4) · [demo 2](video/demo2.mp4) · [demo 3](video/demo3.mp4) · [demo 4](video/demo4.mp4)
+*Full clips: [demo 1](video/demo1.mp4) · [demo 2](video/demo2.mp4) · [demo 3](video/demo3.mp4) · [demo 4](video/demo4.mp4)*
 
 ---
 
@@ -83,23 +81,44 @@ reliable and it fits 12 GB — the LLM decides *what*, deterministic code does i
 
 ---
 
-## Quick start
+## Installation
 
+**Requirements:** Windows 10/11, an NVIDIA GPU (~12 GB VRAM), Python 3.10, Git.
+
+**1. Clone the repo**
 ```bat
-scripts\setup.bat                  :: venv + CUDA torch + deps
-python scripts\download_models.py  :: pull the abliterated Gemma 4 E2B base
-
-:: the desktop app (auto-loads the model on open):
-PC-Agent.vbs                       :: or PC-Agent.bat
-
-:: or the REPL:
-python run.py --dry                :: test the tools with NO model
-python run.py                      :: full agent
+git clone https://github.com/AlfatihRabbani/pc-agent
+cd pc-agent
 ```
 
-The trained dispatcher adapter is on Hugging Face:
-**[onevloth/pc-agent-dispatcher-gemma4-e2b](https://huggingface.co/onevloth/pc-agent-dispatcher-gemma4-e2b)**
-— drop it in `models/dispatcher-final/`, or train your own below.
+**2. Install (creates the venv + CUDA PyTorch + deps)**
+```bat
+scripts\setup.bat
+```
+
+**3. Get the model**
+```bat
+:: base E2B (downloads ~10 GB from Hugging Face into the local cache):
+python scripts\download_models.py
+
+:: the trained dispatcher adapter -> models\dispatcher-final\ :
+.venv\Scripts\hf download onevloth/pc-agent-dispatcher-gemma4-e2b --local-dir models\dispatcher-final
+```
+
+**4. (Optional) Better chat/writing with a 12B model via [Ollama](https://ollama.com)**
+```bat
+ollama create pc-agent-12b -f build\Modelfile.gemma12b   :: point the FROM line at your GGUF
+```
+Then pick it in the app's **⚙ Settings → Chat model**. Skip this to use the built-in E2B.
+
+**5. Run**
+```bat
+PC-Agent.vbs          :: the desktop app (auto-loads the model on open)
+:: or:  python run.py --dry   (test the tools, no model)   |   python run.py   (REPL)
+```
+
+> Want a one-click launcher? Build `PC-Agent.exe` with `build\build_exe.bat`, or grab it
+> from the [latest release](https://github.com/AlfatihRabbani/pc-agent/releases/latest).
 
 ---
 

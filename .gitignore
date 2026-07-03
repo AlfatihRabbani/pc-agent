@@ -10,6 +10,7 @@ models/
 .huggingface/
 video/*
 !video/*.mp4
+!video/*.gif
 *.safetensors
 *.bin
 *.gguf
