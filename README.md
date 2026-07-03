@@ -10,6 +10,10 @@ Built and tuned to run on a single **RTX 3080 Ti (12 GB)**.
 
 *Made by **AlfatihRabbani**.*
 
+[![Model on Hugging Face](https://img.shields.io/badge/%F0%9F%A4%97%20Model-onevloth%2Fpc--agent--dispatcher--gemma4--e2b-yellow)](https://huggingface.co/onevloth/pc-agent-dispatcher-gemma4-e2b)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![Platform: Windows](https://img.shields.io/badge/Platform-Windows-0078D6)](#)
+
 > ⚠️ Research/hobby project. It can move your mouse, type, and change settings —
 > read the **Safety** section before pointing it at anything you care about.
 
@@ -93,8 +97,9 @@ python run.py --dry                :: test the tools with NO model
 python run.py                      :: full agent
 ```
 
-The trained adapter lives on Hugging Face — drop it in `models/dispatcher-final/`
-(see that repo's card), or train your own below.
+The trained dispatcher adapter is on Hugging Face:
+**[onevloth/pc-agent-dispatcher-gemma4-e2b](https://huggingface.co/onevloth/pc-agent-dispatcher-gemma4-e2b)**
+— drop it in `models/dispatcher-final/`, or train your own below.
 
 ---
 
