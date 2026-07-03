@@ -15,6 +15,18 @@ Built and tuned to run on a single **RTX 3080 Ti (12 GB)**.
 
 ---
 
+## Demo
+
+<video src="https://github.com/AlfatihRabbani/pc-agent/raw/main/video/demo1.mp4" controls width="100%"></video>
+<video src="https://github.com/AlfatihRabbani/pc-agent/raw/main/video/demo2.mp4" controls width="100%"></video>
+<video src="https://github.com/AlfatihRabbani/pc-agent/raw/main/video/demo3.mp4" controls width="100%"></video>
+<video src="https://github.com/AlfatihRabbani/pc-agent/raw/main/video/demo4.mp4" controls width="100%"></video>
+
+> If the players don't appear inline, click to download/play:
+> [demo 1](video/demo1.mp4) · [demo 2](video/demo2.mp4) · [demo 3](video/demo3.mp4) · [demo 4](video/demo4.mp4)
+
+---
+
 ## What it does
 
 - 💬 **Chats** locally (uncensored Gemma 4 E2B).
